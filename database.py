@@ -17,9 +17,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     # your code here
     # hint: async with AsyncSessionLocal() as session:
     async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            session.close()
+        yield session
 
 

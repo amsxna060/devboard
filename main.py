@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from database import engine,Base
 from contextlib import asynccontextmanager
-from routers import router as users_router
+from routers import router as users_router,auth_router
 
 
 # Explain this function how it works? is this lifespan function automatically run at startup? and engine code as well?
@@ -15,6 +15,7 @@ async def lifespan(app):
 app = FastAPI(title='DevBoard',lifespan=lifespan)
 
 app.include_router(users_router)
+app.include_router(auth_router)
 
 @app.get('/')
 async def root():

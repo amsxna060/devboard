@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from database import Base
 
 class User(Base):
-    __table__ = "users"
+    __tablename__ = "users"
 
     id:Mapped[int] = mapped_column(primary_key=True) # integer, Primary key
     email:Mapped[str] = mapped_column(String(255),unique=True,nullable=False)     # string(255), unique, not nullable
