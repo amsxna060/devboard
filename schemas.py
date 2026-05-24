@@ -70,7 +70,7 @@ class ProjectOut(BaseModel):
     name:str = Field(...,min_length=2)
     description:Optional[str] = None
     owner_id : int
-    created_at = datetime
+    created_at : datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # ProjectUpdate — name optional, description optional (for PATCH)
 class ProjectUpdate(BaseModel):
@@ -91,8 +91,10 @@ class TaskCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_due_date(self):
-        if self.due_date < datetime.now(timezone.utc):
-            raise ValueError("Due Date Must be Future")
+        if self.due_date:
+            if self.due_date < datetime.now(timezone.utc):
+                raise ValueError("Due Date Must be Future")
+        return self
 
     
 # TaskOut — all fields + from_attributes=True
