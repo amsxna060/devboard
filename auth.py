@@ -48,7 +48,7 @@ async def get_current_user(token:str = Depends(oauth2_scheme),db:AsyncSession = 
         user = results.scalar_one_or_none()
         if not user : 
             raise HTTPException(401, "Could not validate credentials")
-        return UserOut.model_validate(user)
+        return user
     except JWTError as e:
         raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

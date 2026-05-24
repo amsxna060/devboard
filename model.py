@@ -1,7 +1,9 @@
-from sqlalchemy.orm import Mapped,mapped_column
-from sqlalchemy import String, Boolean, DateTime
+from sqlalchemy.orm import Mapped,mapped_column,relationship
+from sqlalchemy import String, Boolean, DateTime,ForeignKey,Enum as SAEnum
 from datetime import datetime, timezone
 from database import Base
+from typing import Optional, List
+import enum
 
 class User(Base):
     __tablename__ = "users"
@@ -14,3 +16,59 @@ class User(Base):
     is_active :Mapped[bool] = mapped_column(Boolean,default=True)  #→ boolean, default True
     # Why use lambda here, and timezone = True?
     created_at :Mapped[datetime] = mapped_column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc)) #→ DateTime, default = now (utc)
+
+    projects:Mapped[List["Project"]] = relationship(back_populates="owner")
+    assigned_tasks: Mapped[List["Task"]] = relationship(back_populates="assignee")
+
+
+# Project has:
+# id, name, description, owner_id (FK → users.id), created_at
+class Project(Base):
+    __tablename__ = "projects"
+    id:Mapped[int] = mapped_column(primary_key=True)
+    name :Mapped[str] =  mapped_column(String(100),nullable=False) 
+    description:Mapped[Optional[str]] = mapped_column(String(1000),nullable=True)
+    owner_id : Mapped[int] = mapped_column(ForeignKey("users.id"),nullable=False)
+    created_at :Mapped[datetime] = mapped_column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc)) #→ DateTime, default = now (utc)
+
+    owner:Mapped["User"] = relationship(back_populates="projects")
+    tasks: Mapped[List["Task"]] = relationship(back_populates="project")
+
+# Task model needs:
+# id, title, description (optional), status (TaskStatus enum, default TODO)
+# priority (int, default 1)
+# due_date (datetime, optional)
+# project_id (FK → projects.id)
+# assignee_id (FK → users.id, optional — task may be unassigned)
+# created_at
+
+# Relationships:
+# project → Project
+# assignee → User (optional)
+
+# Project model needs tasks relationship added:
+# tasks: Mapped[List["Task"]] = relationship(back_populates="project")
+
+# User model needs assigned_tasks relationship:
+# assigned_tasks: Mapped[List["Task"]] = relationship(back_populates="assignee")
+
+
+class TaskStatus(str, enum.Enum):
+    TODO = "todo"
+    IN_PROGRESS = "in_progress"
+    DONE = "done"
+
+class Task(Base):
+    __tablename__ = "tasks"
+    id : Mapped[int] = mapped_column(primary_key=True)
+    title : Mapped[str] = mapped_column(String(200),nullable=False)
+    description:Mapped[Optional[str]] = mapped_column(String(1000),nullable=True)
+    status: Mapped[TaskStatus] = mapped_column(SAEnum(TaskStatus),default=TaskStatus.TODO)
+    priority: Mapped[int] = mapped_column(default=1)
+    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True),nullable=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"),nullable=False)
+    assignee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"),nullable=True)
+    created_at : Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False,default=lambda:datetime.now(timezone.utc))
+
+    assignee : Mapped[Optional["User"]] = relationship(back_populates="assigned_tasks")
+    project: Mapped["Project"] = relationship(back_populates="tasks")

@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field,field_validator,ConfigDict
+from pydantic import BaseModel, Field,field_validator,ConfigDict,model_validator
 from typing import Optional, List
 from datetime import datetime, timezone
 import re
+from model import TaskStatus
 
 
 
@@ -54,6 +55,70 @@ class UserRegister(BaseModel):
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+# ProjectCreate — name (required, min 2), description (optional)
+class ProjectCreate(BaseModel):
+    name : str = Field(...,min_length=2)
+    description : Optional[str] = None
+
+# ProjectOut — id, name, description, owner_id, created_at, from_attributes=True
+class ProjectOut(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+    id:int
+    name:str = Field(...,min_length=2)
+    description:Optional[str] = None
+    owner_id : int
+    created_at = datetime
+
+# ProjectUpdate — name optional, description optional (for PATCH)
+class ProjectUpdate(BaseModel):
+    name:Optional[str]
+    description:Optional[str]
+
+
+# TaskCreate — title (required), description (optional), status (optional, default todo)
+#              priority (1-5), due_date (optional), project_id, assignee_id (optional)
+class TaskCreate(BaseModel):
+    title:str
+    description:Optional[str]
+    status:Optional[TaskStatus] = TaskStatus.TODO
+    priority:int = Field(default=1,ge=1,le=5)
+    due_date:Optional[datetime]
+    project_id:int
+    assignee_id:Optional[int]
+
+    @model_validator(mode="after")
+    def validate_due_date(self):
+        if self.due_date < datetime.now(timezone.utc):
+            raise ValueError("Due Date Must be Future")
+
+    
+# TaskOut — all fields + from_attributes=True
+class TaskOut(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+    id:int
+    title:str
+    description:Optional[str]
+    status:Optional[TaskStatus] = TaskStatus.TODO
+    priority:int= Field(default=1,ge=1,le=5)
+    due_date:Optional[datetime]
+    project_id:int
+    assignee_id:Optional[int]
+    
+# TaskUpdate — all fields optional (for PATCH)
+class TaskUpdate(BaseModel):
+    title:Optional[str]
+    description:Optional[str]
+    status:Optional[TaskStatus]
+    priority:Optional[int] = Field(ge=1,le=5)
+    due_date:Optional[datetime]
+    project_id:Optional[int]
+    assignee_id:Optional[int]
+
 
     
     
