@@ -74,8 +74,8 @@ class ProjectOut(BaseModel):
 
 # ProjectUpdate — name optional, description optional (for PATCH)
 class ProjectUpdate(BaseModel):
-    name:Optional[str]
-    description:Optional[str]
+    name:Optional[str] = Field(None,min_length=2)
+    description:Optional[str] = None
 
 
 # TaskCreate — title (required), description (optional), status (optional, default todo)
@@ -113,13 +113,13 @@ class TaskOut(BaseModel):
     
 # TaskUpdate — all fields optional (for PATCH)
 class TaskUpdate(BaseModel):
-    title:Optional[str]
-    description:Optional[str]
-    status:Optional[TaskStatus]
-    priority:Optional[int] = Field(ge=1,le=5)
-    due_date:Optional[datetime]
-    project_id:Optional[int]
-    assignee_id:Optional[int]
+    title:Optional[str] = None
+    description:Optional[str] = None
+    status:Optional[TaskStatus] = None
+    priority:Optional[int] = Field(None,ge=1,le=5) 
+    due_date:Optional[datetime] = None
+    project_id:Optional[int] = None
+    assignee_id:Optional[int] = None
 
 
     

@@ -21,13 +21,13 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 proj_router = APIRouter(prefix="/projects",tags=["Projects"])
 
-@proj_router.get('/')
+@proj_router.get('/', response_model=List[ProjectOut])
 async def get_projects(user:CurrentUser,db:DbSession):
     results = await db.execute(select(Project).where(Project.owner_id==user.id))
     projects = results.scalars().all()
-    return projects
+    return [ProjectOut.model_validate(project) for project in projects]
 
-@proj_router.post('/')
+@proj_router.post('/',response_model=ProjectOut)
 async def create_project(project:ProjectCreate,user:CurrentUser,db:DbSession):
     db_project = Project(
         name = project.name,
@@ -110,7 +110,7 @@ async def get_projects_with_tasks_fixed(db: DbSession, user: CurrentUser) -> Lis
         })
 
     return response
-@proj_router.get('/{id}')
+@proj_router.get('/{id}',response_model=ProjectOut)
 async def get_project(id:int,user:CurrentUser,db:DbSession):
     results = await db.execute(select(Project).where(Project.id == id,Project.owner_id == user.id))
     project = results.scalar_one_or_none()

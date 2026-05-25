@@ -43,7 +43,9 @@ def create_access_token(data:dict,expire_delta:Optional[timedelta]=None):
 async def get_current_user(token:str = Depends(oauth2_scheme),db:AsyncSession = Depends(get_db)):
     try:
         payload = jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
-        email = payload["sub"]
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(401, "Invalid token")
         results = await db.execute(select(User).where(User.email == email))
         user = results.scalar_one_or_none()
         if not user : 

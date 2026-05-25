@@ -29,8 +29,7 @@ async def get_all_task(user : CurrentUser,
                        project_id:Optional[int]= None,
                        assignee_id:Optional[int] = None
                        ):
-    stmt = select(Task).join(Project,Task.project_id == Project.id).where(Project.owner_id == user.id).options(selectinload(Task.assignee),selectinload(Task.project))
-
+    stmt = select(Task).join(Project,Task.project_id == Project.id).where(Project.owner_id == user.id)
     if status:
         stmt = stmt.where(Task.status == status)
     if project_id:
@@ -43,8 +42,11 @@ async def get_all_task(user : CurrentUser,
     return [TaskOut.model_validate(task) for task in tasks]
 
 @task_router.get('/count')
-async def count_project(status:Optional[TaskStatus],project_id:Optional[int],assignee_id:Optional[int],
-                       user : CurrentUser, db : DbSession):
+async def count_project(user : CurrentUser, db : DbSession,
+                        status:Optional[TaskStatus]= None,
+                        project_id:Optional[int]= None,
+                        assignee_id:Optional[int]= None
+                       ):
     stmt = select(func.count(Task.id)).join(Project,Task.project_id == Project.id).where(Project.owner_id == user.id)
 
     if status:
@@ -55,10 +57,8 @@ async def count_project(status:Optional[TaskStatus],project_id:Optional[int],ass
         stmt = stmt.where(Task.assignee_id == assignee_id)
     
     results = await db.execute(stmt)
-    count = results.scalar_one_or_none()
-    if count == 0:
-        raise HTTPException(404,"No Project Found")
-    return {"count",count}
+    count = results.scalar_one()
+    return {"Total": count}
 
 @task_router.post("/", response_model=TaskOut)
 async def create_task(data: TaskCreate, db: DbSession, user: CurrentUser):
@@ -76,7 +76,4 @@ async def create_task(data: TaskCreate, db: DbSession, user: CurrentUser):
     db.add(task)
     await db.commit()
     await db.refresh(task)
-
-    results = await db.execute(select(Task).where(Task.id == task.id)).options(selectinload(Task.assignee),selectinload(Task.project))
-    task = results.scalar_one_or_none()
     return TaskOut.model_validate(task)
