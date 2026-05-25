@@ -60,10 +60,10 @@ async def get_current_user(token:str = Depends(oauth2_scheme),db:AsyncSession = 
     )
 
 # how can we use decorator here , I m really confused so much here I tried to do.
-async def required_role(*roles:str):
+def required_role(*roles:str):
     async def check_roles(user:User = Depends(get_current_user)):
-        if not all([user.role==role for role in roles]):
-            raise ForbiddenError("Only {roles} can Access, Access Denied")
+        if user.role not in roles:
+            raise ForbiddenError(f"Only {roles} can Access, Access Denied")
         return user
     return check_roles
 

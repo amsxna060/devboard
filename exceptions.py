@@ -1,5 +1,3 @@
-
-
 # NotFoundError(Exception) — takes resource and id
 # ForbiddenError(Exception) — takes message
 # BusinessError(Exception) — takes message and status_code
