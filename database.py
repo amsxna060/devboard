@@ -4,7 +4,8 @@ from typing import AsyncGenerator
 
 CONNECTION_STRING = "sqlite+aiosqlite:///./devboard.db"
 
-engine = create_async_engine(CONNECTION_STRING)
+engine = create_async_engine(CONNECTION_STRING,
+                             echo=True)
 
 AsyncSessionLocal = async_sessionmaker(engine,expire_on_commit=False)
 

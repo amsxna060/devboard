@@ -1,7 +1,8 @@
-from typing import Annotated
+from typing import Annotated, List
 from fastapi import Depends,APIRouter,HTTPException,status,Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select,and_,or_
+from sqlalchemy.orm import selectinload
 from auth import get_current_user
 from database import get_db
 from model import User,Project
@@ -22,7 +23,9 @@ proj_router = APIRouter(prefix="/projects",tags=["Projects"])
 
 @proj_router.get('/')
 async def get_projects(user:CurrentUser,db:DbSession):
-    return user.projects
+    results = await db.execute(select(Project).where(Project.owner_id==user.id))
+    projects = results.scalars().all()
+    return projects
 
 @proj_router.post('/')
 async def create_project(project:ProjectCreate,user:CurrentUser,db:DbSession):
@@ -36,6 +39,77 @@ async def create_project(project:ProjectCreate,user:CurrentUser,db:DbSession):
     await db.refresh(db_project)
     return ProjectOut.model_validate(db_project)
 
+@proj_router.post("/seed")
+async def seed_data(db: DbSession):
+    """Temporary endpoint to create test data"""
+    from model import Task, TaskStatus
+
+    # Create 3 projects with tasks
+    for i in range(1, 4):
+        project = Project(
+            name=f"Project {i}",
+            description=f"Description for project {i}",
+            owner_id=1   # assumes user with id=1 exists
+        )
+        db.add(project)
+        await db.flush()   # flush to get project.id without committing
+
+        for j in range(1, 4):
+            task = Task(
+                title=f"Task {j} in Project {i}",
+                project_id=project.id,
+                assignee_id=1
+            )
+            db.add(task)
+
+    await db.commit()
+    return {"message": "Seeded 3 projects with 3 tasks each"}
+
+@proj_router.get("/with-tasks")
+async def get_projects_with_tasks_naive(db: DbSession, user: CurrentUser)->List[dict]:
+    """
+    INTENTIONAL N+1 — Educational purposes
+    This fetches projects, then accesses tasks relationship
+    In async SQLAlchemy, this raises MissingGreenlet
+    """
+    result = await db.execute(select(Project).where(Project.owner_id == user.id))
+    projects = result.scalars().all()
+
+    # ❌ This is where N+1 happens
+    # In sync SQLAlchemy: lazy loads tasks per project = N+1 queries
+    # In async SQLAlchemy: raises MissingGreenlet error
+    response = []
+    for project in projects:
+        response.append({
+            "id": project.id,
+            "name": project.name,
+            "task_count": len(project.tasks),  # ← accessing relationship without loading
+        })
+
+    return response
+@proj_router.get("/with-tasks-fixed")
+async def get_projects_with_tasks_fixed(db: DbSession, user: CurrentUser) -> List[dict]:
+    """
+    CORRECT — Uses selectinload to prevent N+1
+    Watch the logs: exactly 2 queries regardless of project count
+    """
+    result = await db.execute(
+        select(Project)
+        .where(Project.owner_id == user.id)
+        .options(selectinload(Project.tasks))  # ← load ALL tasks in one extra query
+    )
+    projects = result.scalars().all()
+
+    response = []
+    for project in projects:
+        response.append({
+            "id": project.id,
+            "name": project.name,
+            "task_count": len(project.tasks),  # ✅ already loaded — no extra query
+            "tasks": [{"id": t.id, "title": t.title, "status": t.status} for t in project.tasks]
+        })
+
+    return response
 @proj_router.get('/{id}')
 async def get_project(id:int,user:CurrentUser,db:DbSession):
     results = await db.execute(select(Project).where(Project.id == id,Project.owner_id == user.id))
@@ -67,6 +141,8 @@ async def delete_project(id:int,user:CurrentUser,db:DbSession):
     await db.delete(project)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 
 
     
