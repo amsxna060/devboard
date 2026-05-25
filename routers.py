@@ -6,7 +6,7 @@ from sqlalchemy import select
 from typing import List
 from model import User
 from fastapi.security import OAuth2PasswordRequestForm
-from auth import verify_password, create_access_token,hash_password,get_current_user
+from auth import verify_password, create_access_token,hash_password,get_current_user,admin_required
 
 
 router = APIRouter(prefix="/users",tags=["users"])
@@ -54,6 +54,9 @@ async def login_user(form : OAuth2PasswordRequestForm = Depends(),db: AsyncSessi
 async def get_me(user:UserOut = Depends(get_current_user)):
     return user
 
+@auth_router.get('/admin-only')
+async def get_admin(admin:User = Depends(admin_required)):
+    return {"message": f"Hello Admin {admin.name}!"}
     
     
     

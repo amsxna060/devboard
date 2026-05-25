@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from model import User
 from schemas import UserOut
+from exceptions import ForbiddenError
 
 # Constants
 SECRET_KEY = "devboard-secret-change-in-production"
@@ -58,4 +59,18 @@ async def get_current_user(token:str = Depends(oauth2_scheme),db:AsyncSession = 
         headers={"WWW-Authenticate": "Bearer"},  # OAuth2 spec requires this
     )
 
+# how can we use decorator here , I m really confused so much here I tried to do.
+async def required_role(*roles:str):
+    async def check_roles(user:User = Depends(get_current_user)):
+        if not all([user.role==role for role in roles]):
+            raise ForbiddenError("Only {roles} can Access, Access Denied")
+        return user
+    return check_roles
 
+# @required_role("admin")
+# async def get_admin():
+#     pass
+
+async def admin_required(admin :User = Depends(required_role("admin"))):
+    return admin
+    
