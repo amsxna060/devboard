@@ -121,6 +121,10 @@ class TaskUpdate(BaseModel):
     project_id:Optional[int] = None
     assignee_id:Optional[int] = None
 
+class BulkAssignRequest(BaseModel):
+    task_ids : List[int]
+    assignee_id : int
+    
 
     
     

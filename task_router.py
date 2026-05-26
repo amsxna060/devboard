@@ -6,8 +6,8 @@ from sqlalchemy.orm import selectinload
 from auth import get_current_user
 from database import get_db
 from model import User,Project,Task,TaskStatus
-from schemas import TaskCreate,TaskOut,TaskUpdate
-
+from schemas import TaskCreate,TaskOut,TaskUpdate,BulkAssignRequest
+import asyncio
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
@@ -77,3 +77,24 @@ async def create_task(data: TaskCreate, db: DbSession, user: CurrentUser):
     await db.commit()
     await db.refresh(task)
     return TaskOut.model_validate(task)
+
+@task_router.post('/bulk-assign')
+async def assign_bulk_task(bulktasks:BulkAssignRequest,db:DbSession,user:CurrentUser):
+    current_user_results = await db.execute(select(Project.id).where(Project.owner_id==user.id))
+    current_user_projects = current_user_results.scalars().all()
+    sem = asyncio.Semaphore(3)
+    async def assign_one(task_id):
+        async with sem:
+            results = await db.execute(select(Task).where(Task.id == task_id))
+            task = results.scalar_one_or_none()
+            if not task:
+                raise HTTPException(404,'Task Not Found')
+            if task.project_id not in current_user_projects:
+                raise HTTPException(401,"Task Associate to Project Not Belong to Current User")
+            task.assignee = bulktasks.assignee_id
+            db.commit()
+            return {"result":"assigned successfully"}
+    
+    results = await asyncio.gather(*[assign_one(task_id) for task_id in bulktasks.task_ids],return_exceptions=True)
+    return {"succesfully assigned": sum(1 for d in results if d == {"result":"assigned successfully"})}
+
