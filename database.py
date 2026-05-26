@@ -9,7 +9,7 @@ engine = create_async_engine(CONNECTION_STRING,
                              max_overflow = 10,
                              pool_timeout = 30,
                              pool_recycle = 1800,
-                             pool_pre_print = True,
+                             pool_pre_ping = True,
                              echo=True)
 
 AsyncSessionLocal = async_sessionmaker(engine,expire_on_commit=False)
