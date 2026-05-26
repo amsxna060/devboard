@@ -92,9 +92,9 @@ async def assign_bulk_task(bulktasks:BulkAssignRequest,db:DbSession,user:Current
             if task.project_id not in current_user_projects:
                 raise HTTPException(401,"Task Associate to Project Not Belong to Current User")
             task.assignee = bulktasks.assignee_id
-            db.commit()
             return {"result":"assigned successfully"}
     
     results = await asyncio.gather(*[assign_one(task_id) for task_id in bulktasks.task_ids],return_exceptions=True)
+    db.commit()
     return {"succesfully assigned": sum(1 for d in results if d == {"result":"assigned successfully"})}
 
