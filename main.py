@@ -10,14 +10,14 @@ from exceptions import NotFoundError,ForbiddenError,BusinessError
 
 
 # Explain this function how it works? is this lifespan function automatically run at startup? and engine code as well?
-@asynccontextmanager
-async def lifespan(app):
-    #create all tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
+# @asynccontextmanager
+# async def lifespan(app):
+#     #create all tables
+#     async with engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.create_all)
+#     yield
 
-app = FastAPI(title='DevBoard',lifespan=lifespan)
+app = FastAPI(title='DevBoard')
 app.add_middleware(LoggingMiddleware)
 app.add_exception_handler(NotFoundError,handle_not_found_error)
 app.add_exception_handler(ForbiddenError,handle_forbidden_error)
