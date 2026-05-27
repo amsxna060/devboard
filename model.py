@@ -5,6 +5,23 @@ from database import Base
 from typing import Optional, List
 import enum
 
+class TimestampMixin:
+    __slots__ = ()
+    created_at : Mapped[datetime] = mapped_column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc))
+    updated_at : Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                  default=lambda:datetime.now(timezone.utc),
+                                                  onupdate=lambda:datetime.now(timezone.utc))
+    
+class SoftDeleteMixin:
+    __slots__ = ()
+    deleted_at : Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True),default=None,nullable=True)
+
+    @property
+    def is_deleted(self)-> bool:
+        if self.deleted_at is None:
+            return False
+        return True
+
 class User(Base):
     __tablename__ = "users"
 
@@ -23,13 +40,12 @@ class User(Base):
 
 # Project has:
 # id, name, description, owner_id (FK → users.id), created_at
-class Project(Base):
+class Project(TimestampMixin,SoftDeleteMixin, Base):
     __tablename__ = "projects"
     id:Mapped[int] = mapped_column(primary_key=True)
     name :Mapped[str] =  mapped_column(String(100),nullable=False) 
     description:Mapped[Optional[str]] = mapped_column(String(1000),nullable=True)
     owner_id : Mapped[int] = mapped_column(ForeignKey("users.id"),nullable=False)
-    created_at :Mapped[datetime] = mapped_column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc)) #→ DateTime, default = now (utc)
 
     owner:Mapped["User"] = relationship(back_populates="projects")
     tasks: Mapped[List["Task"]] = relationship(back_populates="project")
@@ -58,7 +74,7 @@ class TaskStatus(str, enum.Enum):
     IN_PROGRESS = "in_progress"
     DONE = "done"
 
-class Task(Base):
+class Task(TimestampMixin,SoftDeleteMixin, Base):
     __tablename__ = "tasks"
     id : Mapped[int] = mapped_column(primary_key=True)
     title : Mapped[str] = mapped_column(String(200),nullable=False)
@@ -68,7 +84,6 @@ class Task(Base):
     due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True),nullable=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"),nullable=False)
     assignee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"),nullable=True)
-    created_at : Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False,default=lambda:datetime.now(timezone.utc))
-
+  
     assignee : Mapped[Optional["User"]] = relationship(back_populates="assigned_tasks")
     project: Mapped["Project"] = relationship(back_populates="tasks")
